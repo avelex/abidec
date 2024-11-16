@@ -3,6 +3,7 @@ package abidec
 import (
 	"fmt"
 
+	"github.com/mitchellh/mapstructure"
 	"github.com/umbracle/ethgo/abi"
 )
 
@@ -19,7 +20,7 @@ func WithStruct(structDef string) DecoderOpts {
 			return fmt.Errorf("failed to build abi from struct definition: %w", err)
 		}
 
-		d.structDef = structDef
+		d.structDef = def
 
 		return nil
 	}
@@ -27,8 +28,7 @@ func WithStruct(structDef string) DecoderOpts {
 
 type AbiDecoder struct {
 	abi       *abi.ABI
-	method    string
-	structDef string
+	structDef StructDef
 }
 
 func NewAbiDecoder(opts ...DecoderOpts) (*AbiDecoder, error) {
@@ -46,11 +46,25 @@ func (d *AbiDecoder) Decode(data []byte) (map[string]any, error) {
 		return nil, fmt.Errorf("abi not initialized")
 	}
 
-	method := d.abi.GetMethod(d.method)
+	method := d.abi.GetMethod(d.structDef.Getter())
 	if method == nil {
 		return nil, fmt.Errorf("method not found")
 	}
 	return method.Decode(data)
+}
+
+func (d *AbiDecoder) DecodeStruct(data []byte, out any) error {
+	val, err := d.Decode(data)
+	if err != nil {
+		return fmt.Errorf("failed to decode: %w", err)
+	}
+
+	structVals, ok := val[d.structDef.Name]
+	if !ok {
+		return fmt.Errorf("struct not found")
+	}
+
+	return mapstructure.Decode(structVals, out)
 }
 
 func (d *AbiDecoder) buildAbiFromStructDef(s StructDef) error {
@@ -64,8 +78,6 @@ func (d *AbiDecoder) buildAbiFromStructDef(s StructDef) error {
 	if err != nil {
 		return fmt.Errorf("failed to create abi: %w", err)
 	}
-
-	d.method = s.Getter()
 
 	return nil
 }

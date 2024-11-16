@@ -14,8 +14,9 @@ var (
 )
 
 type StructDef struct {
-	Name   string
-	Fields []StructField
+	Name          string
+	Fields        []StructField
+	InitialStrDef string
 }
 
 type StructField struct {
@@ -59,8 +60,9 @@ func StructDefFromString(structDef string) (StructDef, error) {
 	}
 
 	return StructDef{
-		Name:   structName,
-		Fields: fields,
+		Name:          structName,
+		Fields:        fields,
+		InitialStrDef: structDef,
 	}, nil
 }
 
